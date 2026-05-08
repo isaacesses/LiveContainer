@@ -44,19 +44,6 @@ enum LCAppListInterfaceStyle : Int, CaseIterable, Identifiable {
     }
 }
 
-enum LCAppGridIconStyle : Int, CaseIterable, Identifiable {
-    var id: Int { rawValue }
-    case large = 0
-    case small = 1
-    
-    var displayName: String {
-        switch self {
-        case .large: "lc.appList.gridIconStyle.large".loc
-        case .small: "lc.appList.gridIconStyle.small".loc
-        }
-    }
-}
-
 struct LCSettingsView: View {
     @State var errorShow = false
     @State var errorInfo = ""
@@ -81,6 +68,7 @@ struct LCSettingsView: View {
     @AppStorage("dynamicColors", store: LCUtils.appGroupUserDefault) var dynamicColors = true
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) var darkModeIcon = false
     @AppStorage("LCAppListInterfaceStyle", store: LCUtils.appGroupUserDefault) var appListInterfaceStyle: LCAppListInterfaceStyle = .list
+    @AppStorage("LCAppGridShowLabels", store: LCUtils.appGroupUserDefault) var appGridShowLabels = false
     
     @AppStorage("LCSideJITServerAddress", store: LCUtils.appGroupUserDefault) var sideJITServerAddress : String = ""
     @AppStorage("LCDeviceUDID", store: LCUtils.appGroupUserDefault) var deviceUDID: String = ""
@@ -237,6 +225,11 @@ struct LCSettingsView: View {
                         }
                     } label: {
                         Text("lc.settings.interface.appLayout".loc)
+                    }
+                    if appListInterfaceStyle == .grid {
+                        Toggle(isOn: $appGridShowLabels) {
+                            Text("lc.settings.interface.showAppLabels".loc)
+                        }
                     }
                     
                 } header: {

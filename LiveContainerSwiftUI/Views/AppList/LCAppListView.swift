@@ -118,7 +118,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
     @AppStorage("LCAppListInterfaceStyle", store: LCUtils.appGroupUserDefault) var appListInterfaceStyle: LCAppListInterfaceStyle = .list
-    @AppStorage("LCAppGridIconStyle", store: LCUtils.appGroupUserDefault) var appGridIconStyle: LCAppGridIconStyle = .large
+    @AppStorage("LCAppGridShowLabels", store: LCUtils.appGroupUserDefault) var appGridShowLabels = false
     
     @State private var isViewAppeared = false
     
@@ -161,20 +161,32 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         _tweakFolderNames = tweakFolderNames
     }
     
+    var gridItemWidth: CGFloat {
+        appGridShowLabels ? 76 : 78
+    }
+    
+    var gridSpacing: CGFloat {
+        appGridShowLabels ? 12 : 10
+    }
+    
     @ViewBuilder
     func appList(apps: [LCAppModel], hidden: Bool) -> some View {
         if appListInterfaceStyle == .grid {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: appGridIconStyle == .large ? 96 : 76), spacing: 18)], spacing: appGridIconStyle == .large ? 28 : 24) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: gridItemWidth), spacing: gridSpacing)], spacing: appGridShowLabels ? 22 : 12) {
                 ForEach(apps, id: \.self) { app in
                     if hidden {
-                        LCAppSkeletonIcon(iconStyle: appGridIconStyle)
+                        LCAppSkeletonIcon(showLabels: appGridShowLabels)
                     } else {
                         LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid)
                             .onDrag {
                                 draggingApp = app
                                 return NSItemProvider(object: NSString(string: sharedAppSortManager.getUniqueIdentifier(for: app) ?? app.displayName))
+                            } preview: {
+                                IconImageView(icon: app.appInfo.iconIsDarkIcon(LCUtils.appGroupUserDefault.bool(forKey: "darkModeIcon")))
+                                    .frame(width: appGridShowLabels ? 58 : 70, height: appGridShowLabels ? 58 : 70)
                             }
                             .onDrop(of: [.text], delegate: LCGridAppDropDelegate(app: app, apps: apps, draggingApp: $draggingApp, sortManager: sharedAppSortManager))
+                            .opacity(draggingApp == app ? 0 : 1)
                     }
                 }
                 .transition(.scale)
@@ -346,16 +358,6 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 customSortViewPresent = true
                             } label: {
                                 Label("lc.appList.sort.customManage".loc, systemImage: "slider.horizontal.3")
-                            }
-                        }
-                        
-                        if appListInterfaceStyle == .grid {
-                            Divider()
-                            
-                            Picker("lc.appList.gridIconStyle".loc, selection: $appGridIconStyle) {
-                                ForEach(LCAppGridIconStyle.allCases) { iconStyle in
-                                    Text(iconStyle.displayName).tag(iconStyle)
-                                }
                             }
                         }
                     } label: {

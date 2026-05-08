@@ -38,7 +38,7 @@ struct LCAppBanner : View {
     
     @AppStorage("dynamicColors", store: LCUtils.appGroupUserDefault) var dynamicColors = true
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) var darkModeIcon = false
-    @AppStorage("LCAppGridIconStyle", store: LCUtils.appGroupUserDefault) var appGridIconStyle: LCAppGridIconStyle = .large
+    @AppStorage("LCAppGridShowLabels", store: LCUtils.appGroupUserDefault) var appGridShowLabels = false
 
     @State private var mainColor : Color
     @State private var icon: UIImage
@@ -271,13 +271,13 @@ struct LCAppBanner : View {
             VStack(spacing: 5) {
                 ZStack {
                     IconImageView(icon: icon)
-                        .frame(width: appGridIconStyle == .large ? 82 : 60, height: appGridIconStyle == .large ? 82 : 60)
+                        .frame(width: appGridShowLabels ? 58 : 70, height: appGridShowLabels ? 58 : 70)
                         .opacity(model.isSigningInProgress ? 0.35 : 1)
                     if model.isSigningInProgress {
                         ProgressView().progressViewStyle(.circular)
                     }
                 }
-                if appGridIconStyle == .small {
+                if appGridShowLabels {
                     Text(model.displayName)
                         .font(.system(size: 11))
                         .lineLimit(2)
@@ -286,7 +286,7 @@ struct LCAppBanner : View {
                         .frame(width: 76, height: 28, alignment: .top)
                 }
             }
-            .frame(width: appGridIconStyle == .large ? 96 : 76, height: appGridIconStyle == .large ? 96 : 94, alignment: .top)
+            .frame(width: appGridShowLabels ? 76 : 78, height: appGridShowLabels ? 92 : 78, alignment: .top)
         }
         .buttonStyle(.plain)
         .disabled(model.isAppRunning)
@@ -578,19 +578,19 @@ struct LCAppSkeletonBanner: View {
 }
 
 struct LCAppSkeletonIcon: View {
-    var iconStyle: LCAppGridIconStyle
+    var showLabels: Bool
     
     var body: some View {
         VStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: iconStyle == .large ? 22 : 16)
+            RoundedRectangle(cornerRadius: showLabels ? 16 : 19)
                 .fill(Color.gray.opacity(0.3))
-                .frame(width: iconStyle == .large ? 82 : 60, height: iconStyle == .large ? 82 : 60)
-            if iconStyle == .small {
+                .frame(width: showLabels ? 58 : 70, height: showLabels ? 58 : 70)
+            if showLabels {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 64, height: 10)
             }
         }
-        .frame(width: iconStyle == .large ? 96 : 76, height: iconStyle == .large ? 96 : 94, alignment: .top)
+        .frame(width: showLabels ? 76 : 78, height: showLabels ? 92 : 78, alignment: .top)
     }
 }
