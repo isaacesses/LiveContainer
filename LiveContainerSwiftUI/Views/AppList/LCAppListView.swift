@@ -43,6 +43,19 @@ private struct LCGridAppDropDelegate: DropDelegate {
     }
 }
 
+private struct LCGridDropCleanupDelegate: DropDelegate {
+    @Binding var draggingApp: LCAppModel?
+    
+    func performDrop(info: DropInfo) -> Bool {
+        draggingApp = nil
+        return true
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+}
+
 class SearchContext: ObservableObject {
     @Published var query: String = ""
     @Published var debouncedQuery: String = ""
@@ -192,6 +205,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 .transition(.scale)
             }
             .frame(maxWidth: .infinity)
+            .onDrop(of: [.text], delegate: LCGridDropCleanupDelegate(draggingApp: $draggingApp))
         } else {
             LazyVStack {
                 ForEach(apps, id: \.self) { app in
@@ -347,11 +361,11 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                             }
                         }
                         .onChange(of: sharedAppSortManager.appSortType) { newValue in
-                            if sharedAppSortManager.appSortType == .custom {
+                            if sharedAppSortManager.appSortType == .custom && appListInterfaceStyle != .grid {
                                 customSortViewPresent = true
                             }
                         }
-                        if sharedAppSortManager.appSortType == .custom {
+                        if sharedAppSortManager.appSortType == .custom && appListInterfaceStyle != .grid {
                             Divider()
                             
                             Button {
