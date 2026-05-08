@@ -19,6 +19,11 @@ private func scheduleGridDragCleanup(draggingApp: Binding<LCAppModel?>, cleanupI
     }
 }
 
+private func cancelGridDrag(draggingApp: Binding<LCAppModel?>, cleanupID: Binding<UUID>) {
+    cleanupID.wrappedValue = UUID()
+    draggingApp.wrappedValue = nil
+}
+
 private struct LCGridAppFramePreferenceKey: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
     
@@ -35,7 +40,7 @@ private struct LCGridDropDelegate: DropDelegate {
     @ObservedObject var sortManager: LCAppSortManager
     
     func performDrop(info: DropInfo) -> Bool {
-        draggingApp = nil
+        cancelGridDrag(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
         return true
     }
     
@@ -235,7 +240,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                     if hidden {
                         LCAppSkeletonIcon(showLabels: appGridShowLabels)
                     } else {
-                        LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid)
+                        LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid) { _ in
+                            cancelGridDrag(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+                        }
                             .onDrag {
                                 draggingApp = app
                                 scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID, delay: 30)

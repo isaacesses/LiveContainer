@@ -21,6 +21,7 @@ struct LCAppBanner : View {
     @State var appInfo: LCAppInfo
     var delegate: LCAppBannerDelegate
     var interfaceStyle: LCAppListInterfaceStyle
+    var onContextMenuVisibilityChanged: ((Bool) -> Void)?
     
     @ObservedObject var model : LCAppModel
     
@@ -46,12 +47,13 @@ struct LCAppBanner : View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var sharedModel : SharedModel
     
-    init(appModel: LCAppModel, delegate: LCAppBannerDelegate, appDataFolders: Binding<[String]>, tweakFolders: Binding<[String]>, interfaceStyle: LCAppListInterfaceStyle = .list) {
+    init(appModel: LCAppModel, delegate: LCAppBannerDelegate, appDataFolders: Binding<[String]>, tweakFolders: Binding<[String]>, interfaceStyle: LCAppListInterfaceStyle = .list, onContextMenuVisibilityChanged: ((Bool) -> Void)? = nil) {
         _appInfo = State(initialValue: appModel.appInfo)
         _appDataFolders = appDataFolders
         _tweakFolders = tweakFolders
         self.delegate = delegate
         self.interfaceStyle = interfaceStyle
+        self.onContextMenuVisibilityChanged = onContextMenuVisibilityChanged
         
         _model = ObservedObject(wrappedValue: appModel)
         _mainColor = State(initialValue: Color.clear)
@@ -205,7 +207,7 @@ struct LCAppBanner : View {
             onCompletion: { result in
             
         })
-        .betterContextMenu(menuProvider: makeContextMenu)
+        .betterContextMenu(menuProvider: makeContextMenu, onMenuVisibilityChanged: onContextMenuVisibilityChanged)
         .alert("lc.appBanner.confirmUninstallTitle".loc, isPresented: $appRemovalAlert.show) {
             Button(role: .destructive) {
                 appRemovalAlert.close(result: true)
@@ -291,7 +293,7 @@ struct LCAppBanner : View {
         .buttonStyle(.plain)
         .disabled(model.isAppRunning)
         .contentShape(RoundedRectangle(cornerRadius: 20))
-        .betterContextMenu(menuProvider: makeContextMenu)
+        .betterContextMenu(menuProvider: makeContextMenu, onMenuVisibilityChanged: onContextMenuVisibilityChanged)
         .onChange(of: darkModeIcon) { newVal in
             icon = appInfo.iconIsDarkIcon(newVal)
             mainColor = extractMainHueColor()
