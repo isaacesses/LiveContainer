@@ -46,7 +46,7 @@ private struct LCGridDropDelegate: DropDelegate {
     
     func dropUpdated(info: DropInfo) -> DropProposal? {
         moveDraggingApp(to: info.location)
-        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID, delay: 30)
+        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
         return DropProposal(operation: .move)
     }
     
