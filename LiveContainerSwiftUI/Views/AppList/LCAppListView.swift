@@ -24,6 +24,19 @@ private func cancelGridDrag(draggingApp: Binding<LCAppModel?>, cleanupID: Bindin
     draggingApp.wrappedValue = nil
 }
 
+private final class LCGridDragItemProvider: NSItemProvider {
+    private let onDeinit: () -> Void
+    
+    init(text: String, onDeinit: @escaping () -> Void) {
+        self.onDeinit = onDeinit
+        super.init(object: NSString(string: text))
+    }
+    
+    deinit {
+        DispatchQueue.main.async(execute: onDeinit)
+    }
+}
+
 private struct LCGridAppFramePreferenceKey: PreferenceKey {
     static var defaultValue: [String: CGRect] = [:]
     
@@ -42,6 +55,10 @@ private struct LCGridDropDelegate: DropDelegate {
     func performDrop(info: DropInfo) -> Bool {
         cancelGridDrag(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
         return true
+    }
+    
+    func dropExited(info: DropInfo) {
+        cancelGridDrag(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
     }
     
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -246,7 +263,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                             .onDrag {
                                 draggingApp = app
                                 scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID, delay: 30)
-                                return NSItemProvider(object: NSString(string: sharedAppSortManager.getUniqueIdentifier(for: app) ?? app.displayName))
+                                return LCGridDragItemProvider(text: sharedAppSortManager.getUniqueIdentifier(for: app) ?? app.displayName) {
+                                    cancelGridDrag(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+                                }
                             } preview: {
                                 IconImageView(icon: app.appInfo.iconIsDarkIcon(LCUtils.appGroupUserDefault.bool(forKey: "darkModeIcon")))
                                     .frame(width: appGridShowLabels ? 58 : 70, height: appGridShowLabels ? 58 : 70)
