@@ -9,6 +9,40 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
+private struct LCGridAppDropDelegate: DropDelegate {
+    let app: LCAppModel
+    let apps: [LCAppModel]
+    @Binding var draggingApp: LCAppModel?
+    @ObservedObject var sortManager: LCAppSortManager
+    
+    func dropEntered(info: DropInfo) {
+        guard let draggingApp, draggingApp != app else {
+            return
+        }
+        
+        sortManager.moveCustomSortApp(draggingApp, before: app, visibleApps: DataManager.shared.model.apps, hiddenApps: DataManager.shared.model.hiddenApps)
+    }
+    
+    func performDrop(info: DropInfo) -> Bool {
+        draggingApp = nil
+        return true
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+    
+    func dropExited(info: DropInfo) {
+        if apps.last == app {
+            guard let draggingApp, draggingApp != app else {
+                return
+            }
+            
+            sortManager.moveCustomSortApp(draggingApp, after: app, visibleApps: DataManager.shared.model.apps, hiddenApps: DataManager.shared.model.hiddenApps)
+        }
+    }
+}
+
 class SearchContext: ObservableObject {
     @Published var query: String = ""
     @Published var debouncedQuery: String = ""
@@ -77,12 +111,14 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     @State private var helpPresent = false
     
     @State private var customSortViewPresent = false
+    @State private var draggingApp: LCAppModel?
     
     @EnvironmentObject private var sharedModel : SharedModel
     @EnvironmentObject private var sharedAppSortManager : LCAppSortManager
     
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
     @AppStorage("LCAppListInterfaceStyle", store: LCUtils.appGroupUserDefault) var appListInterfaceStyle: LCAppListInterfaceStyle = .list
+    @AppStorage("LCAppGridIconStyle", store: LCUtils.appGroupUserDefault) var appGridIconStyle: LCAppGridIconStyle = .large
     
     @State private var isViewAppeared = false
     
@@ -128,12 +164,17 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     @ViewBuilder
     func appList(apps: [LCAppModel], hidden: Bool) -> some View {
         if appListInterfaceStyle == .grid {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 18)], spacing: 24) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: appGridIconStyle == .large ? 96 : 76), spacing: 18)], spacing: appGridIconStyle == .large ? 28 : 24) {
                 ForEach(apps, id: \.self) { app in
                     if hidden {
-                        LCAppSkeletonIcon()
+                        LCAppSkeletonIcon(iconStyle: appGridIconStyle)
                     } else {
                         LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid)
+                            .onDrag {
+                                draggingApp = app
+                                return NSItemProvider(object: NSString(string: sharedAppSortManager.getUniqueIdentifier(for: app) ?? app.displayName))
+                            }
+                            .onDrop(of: [.text], delegate: LCGridAppDropDelegate(app: app, apps: apps, draggingApp: $draggingApp, sortManager: sharedAppSortManager))
                     }
                 }
                 .transition(.scale)
@@ -305,6 +346,16 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                 customSortViewPresent = true
                             } label: {
                                 Label("lc.appList.sort.customManage".loc, systemImage: "slider.horizontal.3")
+                            }
+                        }
+                        
+                        if appListInterfaceStyle == .grid {
+                            Divider()
+                            
+                            Picker("lc.appList.gridIconStyle".loc, selection: $appGridIconStyle) {
+                                ForEach(LCAppGridIconStyle.allCases) { iconStyle in
+                                    Text(iconStyle.displayName).tag(iconStyle)
+                                }
                             }
                         }
                     } label: {

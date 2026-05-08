@@ -38,6 +38,7 @@ struct LCAppBanner : View {
     
     @AppStorage("dynamicColors", store: LCUtils.appGroupUserDefault) var dynamicColors = true
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) var darkModeIcon = false
+    @AppStorage("LCAppGridIconStyle", store: LCUtils.appGroupUserDefault) var appGridIconStyle: LCAppGridIconStyle = .large
 
     @State private var mainColor : Color
     @State private var icon: UIImage
@@ -267,15 +268,25 @@ struct LCAppBanner : View {
                 Task{ await runApp() }
             }
         } label: {
-            ZStack {
-                IconImageView(icon: icon)
-                    .frame(width: 60, height: 60)
-                    .opacity(model.isSigningInProgress ? 0.35 : 1)
-                if model.isSigningInProgress {
-                    ProgressView().progressViewStyle(.circular)
+            VStack(spacing: 5) {
+                ZStack {
+                    IconImageView(icon: icon)
+                        .frame(width: appGridIconStyle == .large ? 82 : 60, height: appGridIconStyle == .large ? 82 : 60)
+                        .opacity(model.isSigningInProgress ? 0.35 : 1)
+                    if model.isSigningInProgress {
+                        ProgressView().progressViewStyle(.circular)
+                    }
+                }
+                if appGridIconStyle == .small {
+                    Text(model.displayName)
+                        .font(.system(size: 11))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.primary)
+                        .frame(width: 76, height: 28, alignment: .top)
                 }
             }
-            .frame(width: 76, height: 76)
+            .frame(width: appGridIconStyle == .large ? 96 : 76, height: appGridIconStyle == .large ? 96 : 94, alignment: .top)
         }
         .buttonStyle(.plain)
         .disabled(model.isAppRunning)
@@ -567,10 +578,19 @@ struct LCAppSkeletonBanner: View {
 }
 
 struct LCAppSkeletonIcon: View {
+    var iconStyle: LCAppGridIconStyle
+    
     var body: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(Color.gray.opacity(0.3))
-            .frame(width: 60, height: 60)
-            .frame(width: 76, height: 76)
+        VStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: iconStyle == .large ? 22 : 16)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: iconStyle == .large ? 82 : 60, height: iconStyle == .large ? 82 : 60)
+            if iconStyle == .small {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 64, height: 10)
+            }
+        }
+        .frame(width: iconStyle == .large ? 96 : 76, height: iconStyle == .large ? 96 : 94, alignment: .top)
     }
 }

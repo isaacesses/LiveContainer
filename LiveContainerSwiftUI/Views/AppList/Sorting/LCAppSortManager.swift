@@ -176,6 +176,45 @@ class LCAppSortManager: ObservableObject {
         }
     }
     
+    func moveCustomSortApp(_ draggingApp: LCAppModel, before targetApp: LCAppModel, visibleApps: [LCAppModel], hiddenApps: [LCAppModel]) {
+        moveCustomSortApp(draggingApp, targetApp: targetApp, visibleApps: visibleApps, hiddenApps: hiddenApps) { apps, sourceIndex, targetApp in
+            let movingApp = apps.remove(at: sourceIndex)
+            guard let destinationIndex = apps.firstIndex(of: targetApp) else {
+                return
+            }
+            apps.insert(movingApp, at: destinationIndex)
+        }
+    }
+    
+    func moveCustomSortApp(_ draggingApp: LCAppModel, after targetApp: LCAppModel, visibleApps: [LCAppModel], hiddenApps: [LCAppModel]) {
+        moveCustomSortApp(draggingApp, targetApp: targetApp, visibleApps: visibleApps, hiddenApps: hiddenApps) { apps, sourceIndex, targetApp in
+            let movingApp = apps.remove(at: sourceIndex)
+            guard let destinationIndex = apps.firstIndex(of: targetApp) else {
+                return
+            }
+            apps.insert(movingApp, at: destinationIndex + 1)
+        }
+    }
+    
+    private func moveCustomSortApp(_ draggingApp: LCAppModel, targetApp: LCAppModel, visibleApps: [LCAppModel], hiddenApps: [LCAppModel], move: (inout [LCAppModel], Int, LCAppModel) -> Void) {
+        var visibleSortedApps = getSortedApps(visibleApps, sortType: appSortType, customSortOrder: customSortOrder)
+        var hiddenSortedApps = getSortedApps(hiddenApps, sortType: appSortType, customSortOrder: customSortOrder)
+        
+        if let sourceIndex = visibleSortedApps.firstIndex(of: draggingApp),
+           visibleSortedApps.contains(targetApp) {
+            move(&visibleSortedApps, sourceIndex, targetApp)
+        } else if let sourceIndex = hiddenSortedApps.firstIndex(of: draggingApp),
+                  hiddenSortedApps.contains(targetApp) {
+            move(&hiddenSortedApps, sourceIndex, targetApp)
+        } else {
+            return
+        }
+        
+        customSortOrder = (visibleSortedApps + hiddenSortedApps)
+            .compactMap { getUniqueIdentifier(for: $0) }
+        appSortType = .custom
+    }
+    
     private func sortByCustomOrder(_ appList: [LCAppModel], customSortOrder: [String]) -> [LCAppModel] {
         if customSortOrder.isEmpty {
             return appList.sorted { $0.appInfo.displayName() < $1.appInfo.displayName() }

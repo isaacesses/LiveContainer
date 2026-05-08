@@ -44,6 +44,19 @@ enum LCAppListInterfaceStyle : Int, CaseIterable, Identifiable {
     }
 }
 
+enum LCAppGridIconStyle : Int, CaseIterable, Identifiable {
+    var id: Int { rawValue }
+    case large = 0
+    case small = 1
+    
+    var displayName: String {
+        switch self {
+        case .large: "lc.appList.gridIconStyle.large".loc
+        case .small: "lc.appList.gridIconStyle.small".loc
+        }
+    }
+}
+
 struct LCSettingsView: View {
     @State var errorShow = false
     @State var errorInfo = ""
@@ -210,13 +223,6 @@ struct LCSettingsView: View {
                 }
                 
                 Section{
-                    Picker(selection: $appListInterfaceStyle) {
-                        ForEach(LCAppListInterfaceStyle.allCases) { interfaceStyle in
-                            Text(interfaceStyle.displayName).tag(interfaceStyle)
-                        }
-                    } label: {
-                        Text("lc.settings.interface.appList".loc)
-                    }
                     Toggle(isOn: $dynamicColors) {
                         Text("lc.settings.dynamicColors".loc)
                     }
@@ -224,6 +230,13 @@ struct LCSettingsView: View {
                         Toggle(isOn: $darkModeIcon) {
                             Text("lc.settings.darkModeIcon".loc)
                         }
+                    }
+                    Picker(selection: $appListInterfaceStyle) {
+                        ForEach(LCAppListInterfaceStyle.allCases) { interfaceStyle in
+                            Text(interfaceStyle.displayName).tag(interfaceStyle)
+                        }
+                    } label: {
+                        Text("lc.settings.interface.appLayout".loc)
                     }
                     
                 } header: {
