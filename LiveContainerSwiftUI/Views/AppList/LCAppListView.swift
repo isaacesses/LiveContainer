@@ -82,6 +82,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     @EnvironmentObject private var sharedAppSortManager : LCAppSortManager
     
     @AppStorage("LCMultitaskMode", store: LCUtils.appGroupUserDefault) var multitaskMode: MultitaskMode = .virtualWindow
+    @AppStorage("LCAppListInterfaceStyle", store: LCUtils.appGroupUserDefault) var appListInterfaceStyle: LCAppListInterfaceStyle = .list
     
     @State private var isViewAppeared = false
     
@@ -124,6 +125,34 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
         _tweakFolderNames = tweakFolderNames
     }
     
+    @ViewBuilder
+    func appList(apps: [LCAppModel], hidden: Bool) -> some View {
+        if appListInterfaceStyle == .grid {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 18)], spacing: 24) {
+                ForEach(apps, id: \.self) { app in
+                    if hidden {
+                        LCAppSkeletonIcon()
+                    } else {
+                        LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid)
+                    }
+                }
+                .transition(.scale)
+            }
+            .frame(maxWidth: .infinity)
+        } else {
+            LazyVStack {
+                ForEach(apps, id: \.self) { app in
+                    if hidden {
+                        LCAppSkeletonBanner()
+                    } else {
+                        LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames)
+                    }
+                }
+                .transition(.scale)
+            }
+        }
+    }
+    
     var body: some View {
         NavigationView {
             ScrollView {
@@ -135,14 +164,9 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                 })
                 .hidden()
                 
-                LazyVStack {
-                    ForEach(filteredApps, id: \.self) { app in
-                        LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames)
-                    }
-                    .transition(.scale)
-                }
-                .padding()
-                .animation(searchContext.isTyping ? nil : .easeInOut, value: filteredApps)
+                appList(apps: filteredApps, hidden: false)
+                    .padding()
+                    .animation(searchContext.isTyping ? nil : .easeInOut, value: filteredApps)
 
                 VStack {
                     if LCUtils.appGroupUserDefault.bool(forKey: "LCStrictHiding") {
@@ -154,10 +178,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                     Spacer()
                                 }
                                 
-                                ForEach(filteredHiddenApps, id: \.self) { app in
-                                    LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames)
-                                }
-                                .transition(.scale)
+                                appList(apps: filteredHiddenApps, hidden: false)
                                 
                             }
                             .padding()
@@ -176,13 +197,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                                     .font(.system(.title2).bold())
                                 Spacer()
                             }
-                            ForEach(filteredHiddenApps, id: \.self) { app in
-                                if sharedModel.isHiddenAppUnlocked {
-                                    LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames)
-                                } else {
-                                    LCAppSkeletonBanner()
-                                }
-                            }
+                            appList(apps: filteredHiddenApps, hidden: !sharedModel.isHiddenAppUnlocked)
                             .animation(.easeInOut, value: sharedModel.isHiddenAppUnlocked)
                             .onTapGesture {
                                 Task { await authenticateUser() }

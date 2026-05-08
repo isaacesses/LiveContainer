@@ -20,6 +20,7 @@ protocol LCAppBannerDelegate {
 struct LCAppBanner : View {
     @State var appInfo: LCAppInfo
     var delegate: LCAppBannerDelegate
+    var interfaceStyle: LCAppListInterfaceStyle
     
     @ObservedObject var model : LCAppModel
     
@@ -44,11 +45,12 @@ struct LCAppBanner : View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var sharedModel : SharedModel
     
-    init(appModel: LCAppModel, delegate: LCAppBannerDelegate, appDataFolders: Binding<[String]>, tweakFolders: Binding<[String]>) {
+    init(appModel: LCAppModel, delegate: LCAppBannerDelegate, appDataFolders: Binding<[String]>, tweakFolders: Binding<[String]>, interfaceStyle: LCAppListInterfaceStyle = .list) {
         _appInfo = State(initialValue: appModel.appInfo)
         _appDataFolders = appDataFolders
         _tweakFolders = tweakFolders
         self.delegate = delegate
+        self.interfaceStyle = interfaceStyle
         
         _model = ObservedObject(wrappedValue: appModel)
         _mainColor = State(initialValue: Color.clear)
@@ -58,8 +60,16 @@ struct LCAppBanner : View {
     }
     @State private var mainHueColor: CGFloat? = nil
     
+    @ViewBuilder
     var body: some View {
-
+        if interfaceStyle == .grid {
+            gridIcon
+        } else {
+            banner
+        }
+    }
+    
+    var banner: some View {
         HStack {
             HStack {
                 IconImageView(icon: icon)
@@ -229,6 +239,48 @@ struct LCAppBanner : View {
         } message: {
             Text(errorInfo)
         }
+        .onChange(of: darkModeIcon) { newVal in
+            icon = appInfo.iconIsDarkIcon(newVal)
+            mainColor = extractMainHueColor()
+        }
+    }
+    
+    var gridIcon: some View {
+        Button {
+            if #available(iOS 16.0, *) {
+                if let currentDataFolder = model.uiSelectedContainer?.folderName,
+                   MultitaskManager.isUsing(container: currentDataFolder) {
+                    var found = false
+                    if #available(iOS 16.1, *) {
+                        found = MultitaskWindowManager.openExistingAppWindow(dataUUID: currentDataFolder)
+                    }
+                    if !found {
+                        found = MultitaskDockManager.shared.bringMultitaskViewToFront(uuid: currentDataFolder)
+                    }
+                    if found {
+                        return
+                    }
+                }
+                
+                Task{ await runApp() }
+            } else {
+                Task{ await runApp() }
+            }
+        } label: {
+            ZStack {
+                IconImageView(icon: icon)
+                    .frame(width: 60, height: 60)
+                    .opacity(model.isSigningInProgress ? 0.35 : 1)
+                if model.isSigningInProgress {
+                    ProgressView().progressViewStyle(.circular)
+                }
+            }
+            .frame(width: 76, height: 76)
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isAppRunning)
+        .contentShape(RoundedRectangle(cornerRadius: 20))
+        .betterContextMenu(menuProvider: makeContextMenu)
         .onChange(of: darkModeIcon) { newVal in
             icon = appInfo.iconIsDarkIcon(newVal)
             mainColor = extractMainHueColor()
@@ -512,4 +564,13 @@ struct LCAppSkeletonBanner: View {
         .background(RoundedRectangle(cornerRadius: 22).fill(Color.gray.opacity(0.1)))
     }
     
+}
+
+struct LCAppSkeletonIcon: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color.gray.opacity(0.3))
+            .frame(width: 60, height: 60)
+            .frame(width: 76, height: 76)
+    }
 }

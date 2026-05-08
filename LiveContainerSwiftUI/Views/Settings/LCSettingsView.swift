@@ -31,6 +31,19 @@ enum JITEnablerType : Int, CaseIterable, Identifiable {
     }
 }
 
+enum LCAppListInterfaceStyle : Int, CaseIterable, Identifiable {
+    var id: Int { rawValue }
+    case list = 0
+    case grid = 1
+    
+    var displayName: String {
+        switch self {
+        case .list: "lc.settings.interface.list".loc
+        case .grid: "lc.settings.interface.grid".loc
+        }
+    }
+}
+
 struct LCSettingsView: View {
     @State var errorShow = false
     @State var errorInfo = ""
@@ -54,6 +67,7 @@ struct LCSettingsView: View {
     @AppStorage("LCStrictHiding", store: LCUtils.appGroupUserDefault) var strictHiding = false
     @AppStorage("dynamicColors", store: LCUtils.appGroupUserDefault) var dynamicColors = true
     @AppStorage("darkModeIcon", store: LCUtils.appGroupUserDefault) var darkModeIcon = false
+    @AppStorage("LCAppListInterfaceStyle", store: LCUtils.appGroupUserDefault) var appListInterfaceStyle: LCAppListInterfaceStyle = .list
     
     @AppStorage("LCSideJITServerAddress", store: LCUtils.appGroupUserDefault) var sideJITServerAddress : String = ""
     @AppStorage("LCDeviceUDID", store: LCUtils.appGroupUserDefault) var deviceUDID: String = ""
@@ -196,6 +210,13 @@ struct LCSettingsView: View {
                 }
                 
                 Section{
+                    Picker(selection: $appListInterfaceStyle) {
+                        ForEach(LCAppListInterfaceStyle.allCases) { interfaceStyle in
+                            Text(interfaceStyle.displayName).tag(interfaceStyle)
+                        }
+                    } label: {
+                        Text("lc.settings.interface.appList".loc)
+                    }
                     Toggle(isOn: $dynamicColors) {
                         Text("lc.settings.dynamicColors".loc)
                     }
