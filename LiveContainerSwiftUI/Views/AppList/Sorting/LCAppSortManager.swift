@@ -196,6 +196,25 @@ class LCAppSortManager: ObservableObject {
         }
     }
     
+    func moveCustomSortApp(_ draggingApp: LCAppModel, toDestinationIndex destinationIndex: Int, in apps: [LCAppModel], visibleApps: [LCAppModel], hiddenApps: [LCAppModel]) {
+        guard let sourceIndex = apps.firstIndex(of: draggingApp),
+              destinationIndex != sourceIndex,
+              destinationIndex != sourceIndex + 1 else {
+            return
+        }
+        
+        if destinationIndex >= apps.count {
+            guard let targetApp = apps.last else {
+                return
+            }
+            
+            moveCustomSortApp(draggingApp, after: targetApp, visibleApps: visibleApps, hiddenApps: hiddenApps)
+            return
+        }
+        
+        moveCustomSortApp(draggingApp, before: apps[destinationIndex], visibleApps: visibleApps, hiddenApps: hiddenApps)
+    }
+    
     private func moveCustomSortApp(_ draggingApp: LCAppModel, targetApp: LCAppModel, visibleApps: [LCAppModel], hiddenApps: [LCAppModel], move: (inout [LCAppModel], Int, LCAppModel) -> Void) {
         var visibleSortedApps = getSortedApps(visibleApps, sortType: appSortType, customSortOrder: customSortOrder)
         var hiddenSortedApps = getSortedApps(hiddenApps, sortType: appSortType, customSortOrder: customSortOrder)
