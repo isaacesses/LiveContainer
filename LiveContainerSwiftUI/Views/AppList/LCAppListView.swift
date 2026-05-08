@@ -9,13 +9,26 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
+private func scheduleGridDragCleanup(draggingApp: Binding<LCAppModel?>, cleanupID: Binding<UUID>, delay: TimeInterval = 0.7) {
+    let newID = UUID()
+    cleanupID.wrappedValue = newID
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        if cleanupID.wrappedValue == newID {
+            draggingApp.wrappedValue = nil
+        }
+    }
+}
+
 private struct LCGridAppDropDelegate: DropDelegate {
     let app: LCAppModel
     let apps: [LCAppModel]
     @Binding var draggingApp: LCAppModel?
+    @Binding var dragCleanupID: UUID
     @ObservedObject var sortManager: LCAppSortManager
     
     func dropEntered(info: DropInfo) {
+        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+        
         guard let draggingApp, draggingApp != app else {
             return
         }
@@ -29,10 +42,13 @@ private struct LCGridAppDropDelegate: DropDelegate {
     }
     
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+        return DropProposal(operation: .move)
     }
     
     func dropExited(info: DropInfo) {
+        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+        
         if apps.last == app {
             guard let draggingApp, draggingApp != app else {
                 return
@@ -45,6 +61,7 @@ private struct LCGridAppDropDelegate: DropDelegate {
 
 private struct LCGridDropCleanupDelegate: DropDelegate {
     @Binding var draggingApp: LCAppModel?
+    @Binding var dragCleanupID: UUID
     
     func performDrop(info: DropInfo) -> Bool {
         draggingApp = nil
@@ -52,7 +69,8 @@ private struct LCGridDropCleanupDelegate: DropDelegate {
     }
     
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+        scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID)
+        return DropProposal(operation: .move)
     }
 }
 
@@ -125,6 +143,7 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
     
     @State private var customSortViewPresent = false
     @State private var draggingApp: LCAppModel?
+    @State private var dragCleanupID = UUID()
     
     @EnvironmentObject private var sharedModel : SharedModel
     @EnvironmentObject private var sharedAppSortManager : LCAppSortManager
@@ -193,19 +212,19 @@ struct LCAppListView : View, LCAppBannerDelegate, LCAppModelDelegate {
                         LCAppBanner(appModel: app, delegate: self, appDataFolders: $appDataFolderNames, tweakFolders: $tweakFolderNames, interfaceStyle: .grid)
                             .onDrag {
                                 draggingApp = app
+                                scheduleGridDragCleanup(draggingApp: $draggingApp, cleanupID: $dragCleanupID, delay: 30)
                                 return NSItemProvider(object: NSString(string: sharedAppSortManager.getUniqueIdentifier(for: app) ?? app.displayName))
                             } preview: {
                                 IconImageView(icon: app.appInfo.iconIsDarkIcon(LCUtils.appGroupUserDefault.bool(forKey: "darkModeIcon")))
                                     .frame(width: appGridShowLabels ? 58 : 70, height: appGridShowLabels ? 58 : 70)
                             }
-                            .onDrop(of: [.text], delegate: LCGridAppDropDelegate(app: app, apps: apps, draggingApp: $draggingApp, sortManager: sharedAppSortManager))
-                            .opacity(draggingApp == app ? 0 : 1)
+                            .onDrop(of: [.text], delegate: LCGridAppDropDelegate(app: app, apps: apps, draggingApp: $draggingApp, dragCleanupID: $dragCleanupID, sortManager: sharedAppSortManager))
                     }
                 }
                 .transition(.scale)
             }
             .frame(maxWidth: .infinity)
-            .onDrop(of: [.text], delegate: LCGridDropCleanupDelegate(draggingApp: $draggingApp))
+            .onDrop(of: [.text], delegate: LCGridDropCleanupDelegate(draggingApp: $draggingApp, dragCleanupID: $dragCleanupID))
         } else {
             LazyVStack {
                 ForEach(apps, id: \.self) { app in
